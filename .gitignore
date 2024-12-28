@@ -1,0 +1,43 @@
+# --- Betriebssystem-spezifisch ---
+.DS_Store
+Thumbs.db
+
+# --- Xcode / macOS ---
+*.xcuserdatad
+*.xcscmblueprint
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.swp
+*.lock
+*.zip
+*.gz
+*.xcworkspace/xcuserdata
+
+# --- Swift-Paketmanager (SPM) ---
+/.build
+/.swiftpm/xcode
+
+# --- Carthage ---
+/Carthage
+
+# --- CocoaPods ---
+/Pods
+Podfile.lock
+
+# --- Xcode DerivedData ---
+/DerivedData
+/build
+
+# --- Sonstiges (z. B. SPM-artifact) ---
+*.xcodeproj/project.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+
+# --- Eigene Konfigurationsdateien ---
+# Hier explizit Config.plist oder andere persönliche Plists ausschließen
+Config.plist
+# falls du weitere private Plists oder JSONs hast, füge sie hier an
+# PrivateConfig.plist
+# Secrets.json
+*.plist
+watchmyai Watch App/Config.plist
