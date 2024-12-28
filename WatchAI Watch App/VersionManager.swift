@@ -7,5 +7,5 @@
 
 struct VersionManager {
     static let AppVersionNumber = "1.0"
-    static let AppBuildNumber = "1"
+    static let AppBuildNumber = "2"
 }

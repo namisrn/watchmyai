@@ -158,7 +158,7 @@ struct NewChat: View {
             do {
                 try context.save()
             } catch {
-                print("Fehler beim Speichern der Konversation: \(error)")
+                print("Error saving the conversation: \(error)")
             }
         }
     }

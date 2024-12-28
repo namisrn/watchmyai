@@ -36,7 +36,7 @@ final class OpenAIService {
               // Wert mit dem Schlüssel "OpenAI_Key" auslesen
               let key = plist["OpenAI_Key"] as? String
         else {
-            fatalError("Fehler: 'OpenAI_Key' wurde nicht in der Config.plist gefunden.")
+            fatalError("Error: ‘OpenAI_Key’ was not found in the Config.plist.")
         }
         return key
     }()
@@ -58,7 +58,7 @@ final class OpenAIService {
             [
                 "role": "system",
                 "content": """
-                Du bist ein freundlicher, hilfsbereiter Chat-Assistent. Beantworte bitte die Fragen kurz und prägnant.
+                You are a friendly, helpful chat assistant. Please answer questions briefly and concisely..
                 """
             ]
         )
@@ -70,9 +70,9 @@ final class OpenAIService {
         let requestBody: [String: Any] = [
             "model": "gpt-4o-mini",
             "messages": messages,
-            "temperature": 0.3,
-            "max_tokens": 500,
-            "top_p": 0.8
+            "temperature": 0.2, // Niedrigere Temperatur für mehr Determinismus
+            "max_tokens": 100,  // Begrenze die Antwort auf max. 100 Tokens
+            "top_p": 0.9        // Etwas mehr Variabilität als bei reiner Temperaturkontrolle
         ]
         
         // URL erstellen
@@ -105,7 +105,7 @@ final class OpenAIService {
                 completion(.failure(NSError(
                     domain: "API Error",
                     code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "Keine Daten erhalten"]
+                    userInfo: [NSLocalizedDescriptionKey: "No data received."]
                 )))
                 return
             }
@@ -117,7 +117,7 @@ final class OpenAIService {
                     completion(.failure(NSError(
                         domain: "API Error",
                         code: 0,
-                        userInfo: [NSLocalizedDescriptionKey: "Keine gültige Antwort erhalten"]
+                        userInfo: [NSLocalizedDescriptionKey: "No valid response received."]
                     )))
                 }
             } catch {
@@ -165,7 +165,7 @@ final class OpenAIService {
                 completion(.failure(NSError(
                     domain: "API Error",
                     code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "Keine Daten erhalten"]
+                    userInfo: [NSLocalizedDescriptionKey: "No data received."]
                 )))
                 return
             }
