@@ -1,15 +1,14 @@
 //
-//  watchmyaiApp.swift
-//  watchmyai Watch App
+//  WatchAIApp.swift
+//  WatchAI Watch App
 //
-//  Created by Rafat Nami, Sasan on 27.12.24.
+//  Created by Sasan Rafat Nami on 28.12.24.
 //
 
 import SwiftUI
 import SwiftData
-
 @main
-struct watchmyai_Watch_AppApp: App {
+struct WatchAI_Watch_AppApp: App {
     var container: ModelContainer?
     
     init() {

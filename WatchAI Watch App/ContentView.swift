@@ -1,8 +1,8 @@
 //
 //  ContentView.swift
-//  watchmyai Watch App
+//  WatchAI Watch App
 //
-//  Created by Rafat Nami, Sasan on 27.12.24.
+//  Created by Sasan Rafat Nami on 28.12.24.
 //
 
 import SwiftUI
