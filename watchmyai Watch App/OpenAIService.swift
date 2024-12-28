@@ -26,17 +26,17 @@ final class OpenAIService {
     
     // MARK: - Private Eigenschaften
     
-    /// Lies den Key aus der Config.plist (Schlüssel: "OpenAI_API_Key").
+    /// Lies den Key aus der Config.plist (Schlüssel: "OpenAI_Key").
     /// Falls der Schlüssel nicht existiert, wirf einen Fehler oder verwende einen leeren String.
     private let apiKey: String = {
         // Pfad zu "Config.plist" ermitteln
         guard let filePath = Bundle.main.path(forResource: "Config", ofType: "plist"),
               // Dictionary aus der Propertylist laden
               let plist = NSDictionary(contentsOfFile: filePath),
-              // Wert mit dem Schlüssel "OpenAI_API_Key" auslesen
-              let key = plist["OpenAI_API_Key"] as? String
+              // Wert mit dem Schlüssel "OpenAI_Key" auslesen
+              let key = plist["OpenAI_Key"] as? String
         else {
-            fatalError("Fehler: 'OpenAI_API_Key' wurde nicht in der Config.plist gefunden.")
+            fatalError("Fehler: 'OpenAI_Key' wurde nicht in der Config.plist gefunden.")
         }
         return key
     }()
