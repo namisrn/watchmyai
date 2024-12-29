@@ -8,27 +8,32 @@
 import SwiftUI
 import SwiftData
 
+/// Ansicht zur Anzeige der Details einer Konversation.
 struct ConversationDetailView: View {
     let conversation: Conversations
-    
+
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 2) {
+            LazyVStack(spacing: 8) {
                 ForEach(conversation.messages, id: \.self) { message in
-                    messageView(message: message)
+                    messageView(for: message)
                 }
             }
+            .padding(.horizontal)
         }
         .navigationTitle(conversation.title)
+        .navigationBarTitleDisplayMode(.inline)
     }
-    
-    private func messageView(message: Chat) -> some View {
+
+    /// Erstellt die Ansicht für eine einzelne Nachricht.
+    /// - Parameter message: Die anzuzeigende Nachricht.
+    /// - Returns: Eine SwiftUI-Ansicht für die Nachricht.
+    private func messageView(for message: Chat) -> some View {
         HStack {
-            // Benutzer-Nachrichten rechts, Assistent-Nachrichten links
             if message.sender == SenderRole.user.rawValue {
                 Spacer()
             }
-            
+
             Text(message.content)
                 .padding()
                 .background(
@@ -39,12 +44,12 @@ struct ConversationDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .foregroundColor(.white)
                 .padding(message.sender == SenderRole.user.rawValue ? .leading : .trailing, 15)
-            
+
             if message.sender == SenderRole.assistant.rawValue {
                 Spacer()
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .transition(.slide)
     }
 }
@@ -60,6 +65,6 @@ struct ConversationDetailView: View {
             Chat(content: "Ich habe eine Frage...", sender: SenderRole.user.rawValue)
         ]
     )
-    
+
     return ConversationDetailView(conversation: dummyConversation)
 }

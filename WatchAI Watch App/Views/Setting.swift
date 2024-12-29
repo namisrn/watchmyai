@@ -7,34 +7,32 @@
 
 import SwiftUI
 
-/// Model for a Setting Item
+/// Modell für ein Einstellungs-Item.
 struct SettingItem: Identifiable {
-    var id = UUID()
-    var title: String
-    var destinationView: AnyView
+    let id = UUID()
+    let title: String
+    let destinationView: AnyView
 }
 
-/// Example Setting Entries
-let settingItems: [SettingItem] = [
+/// Beispielhafte Einstellungsoptionen.
+private let settingItems: [SettingItem] = [
     SettingItem(title: "Version", destinationView: AnyView(VersionView())),
     SettingItem(title: "What's New", destinationView: AnyView(WhatsNewView())),
     SettingItem(title: "Auto-Update", destinationView: AnyView(AutoUpdateView())),
     SettingItem(title: "Legal Notices", destinationView: AnyView(LegalNoticesView()))
 ]
 
-/// Main Settings View
+/// Hauptansicht der Einstellungen.
 struct Setting: View {
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(settingItems) { item in
-                    NavigationLink(destination: item.destinationView) {
-                        Text(item.title)
-                            .font(.headline)
-                            .padding(.vertical, 5)
-                    }
-                    .padding(.vertical, 10)
+            List(settingItems) { item in
+                NavigationLink(destination: item.destinationView) {
+                    Text(item.title)
+                        .font(.headline)
+                        .padding(.vertical, 5)
                 }
+                .padding(.vertical, 10)
             }
             .navigationTitle("Settings")
             .listStyle(.plain)
@@ -42,7 +40,7 @@ struct Setting: View {
     }
 }
 
-/// Version Information View
+/// Ansicht: Versionsinformationen.
 struct VersionView: View {
     var body: some View {
         VStack {
@@ -57,15 +55,17 @@ struct VersionView: View {
     }
 }
 
-/// What's New View
+/// Ansicht: "Was gibt's Neues?".
 struct WhatsNewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 15) {
-                Section(header: Text("Version 1.0").font(.headline)) {
-                    Text("- Welcome! to WatchMyAI")
+                Section(header: Text("Version 1.1").font(.headline)) {
+                    Text("- Added Natural Language (NL) support for detecting and matching the user's language.")
                 }
-
+                Section(header: Text("Version 1.0").font(.headline)) {
+                    Text("- Welcome to WatchMyAI!")
+                }
             }
             .padding()
         }
@@ -73,7 +73,7 @@ struct WhatsNewView: View {
     }
 }
 
-/// Auto-Update Instructions View
+/// Ansicht: Automatische Updates.
 struct AutoUpdateView: View {
     var body: some View {
         ScrollView {
@@ -93,7 +93,7 @@ struct AutoUpdateView: View {
     }
 }
 
-/// Legal Notices View
+/// Ansicht: Rechtliche Hinweise.
 struct LegalNoticesView: View {
     var body: some View {
         ScrollView {
@@ -122,7 +122,7 @@ struct LegalNoticesView: View {
     }
 }
 
-/// Preview Provider
+/// Vorschau für die Settings-Ansicht.
 #Preview {
     Setting()
 }
