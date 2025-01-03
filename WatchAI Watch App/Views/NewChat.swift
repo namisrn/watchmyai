@@ -25,7 +25,7 @@ struct NewChat: View {
                                 Text("How can I help you?")
                                     .padding(8)
                                     .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(10)
+                                    .cornerRadius(15)
 
                                 ForEach(viewModel.messages, id: \.id) { message in
                                     messageView(for: message)
@@ -58,7 +58,7 @@ struct NewChat: View {
                                 .foregroundColor(.blue)
                                 .frame(width: 65, height: 45)
                                 .background(.ultraThinMaterial)
-                                .cornerRadius(20)
+                                .cornerRadius(15)
                                 .multilineTextAlignment(.center)
                                 .submitLabel(.send)
                                 .onSubmit {
@@ -96,9 +96,10 @@ struct NewChat: View {
                         ? Color.blue
                         : Color.gray.opacity(0.2)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: 15))
                 .foregroundColor(.white)
                 .padding(message.role == .user ? .leading : .trailing, 15)
+                .lineLimit(nil)
 
             if message.role == .assistant { Spacer() }
         }
