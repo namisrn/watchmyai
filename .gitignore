@@ -4,8 +4,6 @@ Thumbs.db
 
 # Secrets
 WatchAI/Resources/Config.plist
-WatchAI/Resources/Secrets.xcconfig
-WatchAI/Resources/*.xcconfig
 
 # --- Xcode / macOS ---
 *.xcuserdatad
