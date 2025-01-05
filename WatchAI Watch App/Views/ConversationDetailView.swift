@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 
-/// Ansicht zur Anzeige der Details einer Konversation.
 struct ConversationDetailView: View {
     let conversation: Conversations
 
@@ -24,16 +23,12 @@ struct ConversationDetailView: View {
         .navigationTitle(conversation.title)
         .navigationBarTitleDisplayMode(.inline)
     }
-
-    /// Erstellt die Ansicht für eine einzelne Nachricht.
-    /// - Parameter message: Die anzuzeigende Nachricht.
-    /// - Returns: Eine SwiftUI-Ansicht für die Nachricht.
+    
     private func messageView(for message: Chat) -> some View {
         HStack {
             if message.sender == SenderRole.user.rawValue {
                 Spacer()
             }
-
             Text(message.content)
                 .padding()
                 .background(
@@ -44,7 +39,7 @@ struct ConversationDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .foregroundColor(.white)
                 .padding(message.sender == SenderRole.user.rawValue ? .leading : .trailing, 15)
-
+            
             if message.sender == SenderRole.assistant.rawValue {
                 Spacer()
             }
@@ -55,7 +50,6 @@ struct ConversationDetailView: View {
 }
 
 #Preview {
-    // Beispiel: Dummy-Konversation für die Vorschau
     let dummyConversation = Conversations(
         title: "Test Preview",
         createdDate: Date(),

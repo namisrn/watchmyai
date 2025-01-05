@@ -60,6 +60,9 @@ struct WhatsNewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 15) {
+                Section(header: Text("Version 1.2").font(.headline)) {
+                    Text("- Bug fixes and improvements")
+                }
                 Section(header: Text("Version 1.1").font(.headline)) {
                     Text("- Added Natural Language (NL) support for detecting and matching the user's language.")
                 }

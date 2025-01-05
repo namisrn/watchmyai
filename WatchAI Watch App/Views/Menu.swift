@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-/// Represents a menu item with navigation details.
 struct MenuItem: Identifiable {
     let id = UUID()
     let title: String
@@ -16,7 +15,6 @@ struct MenuItem: Identifiable {
     let destination: AnyView
 }
 
-/// List of available menu items with destinations.
 private let menuItems: [MenuItem] = [
     MenuItem(
         title: "New Chat",
@@ -38,7 +36,6 @@ private let menuItems: [MenuItem] = [
     )
 ]
 
-/// Main menu view for navigation.
 struct Menu: View {
     var body: some View {
         NavigationStack {
@@ -54,7 +51,6 @@ struct Menu: View {
     }
 }
 
-/// Represents a row in the menu displaying icon, title, and subtitle.
 struct MenuRow: View {
     let item: MenuItem
     
@@ -66,13 +62,13 @@ struct MenuRow: View {
             
             Spacer()
             
-                Text(item.title)
-                    .font(.title3)
-                    .fontWeight(.medium)
-                
-                Text(item.subtitle)
-                    .font(.footnote)
-                    .foregroundColor(.gray)
+            Text(item.title)
+                .font(.title3)
+                .fontWeight(.medium)
+            
+            Text(item.subtitle)
+                .font(.footnote)
+                .foregroundColor(.gray)
         }
         .padding(.vertical, 10)
     }

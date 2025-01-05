@@ -44,3 +44,4 @@ Config.plist
 # Secrets.json
 *.plist
 watchmyai Watch App/Config.plist
+WatchAI Watch App/Resources/Secrets.xcconfig

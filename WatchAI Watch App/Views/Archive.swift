@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 
-/// Ansicht zur Anzeige des Archivbildschirms.
 struct Archive: View {
     @Environment(\.modelContext) private var context
     @Query(sort: [SortDescriptor(\Conversations.lastModified, order: .reverse)])
@@ -17,18 +16,20 @@ struct Archive: View {
     var body: some View {
         NavigationStack {
             List {
-                // Anzeige der archivierten Konversationen
-                ForEach(sortedConversations) { conversation in
-                    NavigationLink(destination: ConversationDetailView(conversation: conversation)) {
-                        Text(conversation.title)
-                            .font(.headline)
-                            .lineLimit(1) // Beschränkung der Zeilen für lange Titel
+                if sortedConversations.isEmpty {
+                    Text("No archived conversations")
+                        .foregroundColor(.gray)
+                } else {
+                    ForEach(sortedConversations) { conversation in
+                        NavigationLink(destination: ConversationDetailView(conversation: conversation)) {
+                            Text(conversation.title)
+                                .font(.headline)
+                                .lineLimit(1)
+                        }
                     }
-                }
-                .onDelete(perform: deleteItems)
-                
-                // Button: Alle Nachrichten löschen
-                if !sortedConversations.isEmpty {
+                    .onDelete(perform: deleteItems)
+                    
+                    // Button: Alle Nachrichten löschen
                     deleteAllButton()
                 }
             }
@@ -37,9 +38,6 @@ struct Archive: View {
         }
     }
     
-    // MARK: - Private Views
-    
-    /// Erstellt den Button, um alle Konversationen zu löschen.
     private func deleteAllButton() -> some View {
         Button(action: deleteAllMessages) {
             Text("Delete All")
@@ -50,13 +48,9 @@ struct Archive: View {
                 .background(Color.red.opacity(0.1))
                 .cornerRadius(10)
         }
-        .listRowBackground(Color.clear) // Kein Hintergrund für den Button
+        .listRowBackground(Color.clear)
     }
     
-    // MARK: - Private Methods
-    
-    /// Löscht ausgewählte Konversationen.
-    /// - Parameter offsets: Die zu löschenden Indizes.
     private func deleteItems(at offsets: IndexSet) {
         for index in offsets {
             let conversation = sortedConversations[index]
@@ -64,7 +58,6 @@ struct Archive: View {
         }
     }
     
-    /// Löscht alle Konversationen im Archiv.
     private func deleteAllMessages() {
         for conversation in sortedConversations {
             context.delete(conversation)

@@ -10,14 +10,13 @@ import SwiftUI
 struct NewChat: View {
     @Environment(\.modelContext) private var context
     @StateObject private var viewModel = ViewModel()
-    @State private var conversation: Conversations?
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 VStack {
                     Spacer(minLength: 60)
-
+                    
                     // ScrollView mit Chat-Verlauf
                     ScrollView {
                         ScrollViewReader { scrollView in
@@ -26,19 +25,18 @@ struct NewChat: View {
                                     .padding(8)
                                     .background(Color.gray.opacity(0.2))
                                     .cornerRadius(15)
-
+                                
                                 ForEach(viewModel.messages, id: \.id) { message in
                                     messageView(for: message)
                                         .id(message.id)
                                 }
                             }
-                            .onChange(of: viewModel.messages) {
+                            .onChange(of: viewModel.messages) { _ in
                                 withAnimation {
                                     scrollView.scrollTo(viewModel.messages.last?.id, anchor: .bottom)
                                 }
                             }
                         }
-
                         // Ladespinner
                         if viewModel.isLoading {
                             ProgressView()
@@ -47,8 +45,6 @@ struct NewChat: View {
                         }
                     }
                     .scenePadding()
-
-                    // Eingabefeld
                     .toolbar {
                         ToolbarItem(placement: .bottomBar) {
                             Spacer()
@@ -62,9 +58,7 @@ struct NewChat: View {
                                 .multilineTextAlignment(.center)
                                 .submitLabel(.send)
                                 .onSubmit {
-                                    if !viewModel.currentInput.isEmpty {
-                                        viewModel.sendMessage()
-                                    }
+                                    viewModel.sendMessage()
                                 }
                         }
                     }
@@ -72,23 +66,30 @@ struct NewChat: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .edgesIgnoringSafeArea(.all)
+            .navigationTitle("New Chat")
         }
         .onAppear {
+            // ModelContext übergeben
+            viewModel.modelContext = context
             viewModel.resetChat()
-            initializeNewConversation()
         }
-        .onDisappear {
-            saveConversation()
+        // NEU: Falls errorMessage gesetzt wird, zeigen wir einen Alert.
+        .alert("Error", isPresented: $viewModel.showErrorAlert) {
+            // Optional: Buttons etc.
+        } message: {
+            // Inhalt des Alerts
+            Text(viewModel.errorMessage ?? "Unknown error")
         }
         .preferredColorScheme(.dark)
-        .navigationTitle("New Chat")
     }
-
-    /// Erstellt eine Ansicht für eine einzelne Nachricht
+    
+    /// Ansicht für eine einzelne Nachricht
     private func messageView(for message: Message) -> some View {
         HStack {
-            if message.role == .user { Spacer() }
-
+            if message.role == .user {
+                Spacer()
+            }
+            
             Text(message.content)
                 .padding()
                 .background(
@@ -100,66 +101,15 @@ struct NewChat: View {
                 .foregroundColor(.white)
                 .padding(message.role == .user ? .leading : .trailing, 15)
                 .lineLimit(nil)
-
-            if message.role == .assistant { Spacer() }
+            
+            if message.role == .assistant {
+                Spacer()
+            }
         }
         .padding(.vertical, 2)
         .transition(.slide)
     }
-
-    /// Generiert den Titel basierend auf der ersten Nachricht oder einem Platzhalter
-    private func generateTitle() -> String {
-        let maxTitleLength = 50
-        let baseTitle = viewModel.messages.first?.content ?? "New Conversation"
-        return String(baseTitle.prefix(maxTitleLength))
-    }
-
-    /// Initialisiert eine neue Konversation und fügt sie dem Modell hinzu
-    private func initializeNewConversation() {
-        guard viewModel.userHasSentMessage else { return }
-
-        let title = generateTitle()
-        let newConversation = Conversations(
-            title: title,
-            createdDate: Date(),
-            lastModified: Date(),
-            messages: []
-        )
-        self.conversation = newConversation
-        context.insert(newConversation)
-    }
-
-    /// Speichert die Konversation und den Chatverlauf
-    private func saveConversation() {
-        guard viewModel.userHasSentMessage else { return }
-
-        if conversation == nil {
-            let title = generateTitle()
-            let newConversation = Conversations(
-                title: title,
-                createdDate: Date(),
-                lastModified: Date(),
-                messages: []
-            )
-            self.conversation = newConversation
-            context.insert(newConversation)
-        }
-
-        if let conversation = self.conversation {
-            for vmMessage in viewModel.messages {
-                let chatMessage = Chat(content: vmMessage.content, sender: vmMessage.role.rawValue)
-                conversation.messages.append(chatMessage)
-                context.insert(chatMessage)
-            }
-            do {
-                try context.save()
-            } catch {
-                print("Error saving the conversation: \(error.localizedDescription)")
-            }
-        }
-    }
 }
-
 #Preview {
     NewChat()
 }
