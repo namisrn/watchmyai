@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		8ADE042F2D1FE7D200A40A83 /* WatchAI Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 8ADE042E2D1FE7D200A40A83 /* WatchAI Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A5D5C0592D2E88B1005CEF22 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = A5D5C0582D2E88B1005CEF22 /* Alamofire */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5D5C0592D2E88B1005CEF22 /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,6 +116,7 @@
 			);
 			name = "WatchAI Watch App";
 			packageProductDependencies = (
+				A5D5C0582D2E88B1005CEF22 /* Alamofire */,
 			);
 			productName = "WatchAI Watch App";
 			productReference = 8ADE042E2D1FE7D200A40A83 /* WatchAI Watch App.app */;
@@ -146,6 +149,9 @@
 			);
 			mainGroup = 8ADE04212D1FE7D100A40A83;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A5D5C0572D2E88B1005CEF22 /* XCRemoteSwiftPackageReference "Alamofire" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8ADE04292D1FE7D200A40A83 /* Products */;
 			projectDirPath = "";
@@ -333,7 +339,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3;
 				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.sn.aiwatch.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -366,7 +372,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3;
 				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.sn.aiwatch.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -389,7 +395,7 @@
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = P57GR7YZG3;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchAI;
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sn.aiwatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -406,7 +412,7 @@
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = P57GR7YZG3;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchAI;
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sn.aiwatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -446,6 +452,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A5D5C0572D2E88B1005CEF22 /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.10.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A5D5C0582D2E88B1005CEF22 /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5D5C0572D2E88B1005CEF22 /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8ADE04222D1FE7D100A40A83 /* Project object */;
 }

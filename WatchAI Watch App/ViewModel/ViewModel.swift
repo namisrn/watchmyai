@@ -36,36 +36,51 @@ final class ViewModel: ObservableObject {
     func sendMessage() {
         guard !currentInput.isEmpty else { return }
         isLoading = true
-        
+
+        // Sentiment-Analyse
+        let sentiment = NLProcessor.analyzeSentiment(for: currentInput)
+        print("📊 Sentiment: \(sentiment)")
+
+        // Entity Extraction
+        let entities = NLProcessor.extractEntities(from: currentInput)
+        print("🧩 Entities: \(entities)")
+
+        // Spracherkennung
+        let language = NLProcessor.detectLanguage(for: currentInput)
+        print("🌐 Language detected: \(language)")
+
+        // Keyword Extraction
+        let keywords = NLProcessor.extractKeywords(from: currentInput)
+        print("🔑 Keywords: \(keywords)")
+
         let newMessage = Message(
             id: UUID(),
             role: .user,
             content: currentInput,
             createdAt: Date()
         )
-        
+
         messages.append(newMessage)
         currentInput = ""
         userHasSentMessage = true
-        
-        // conversationHistory für den API-Request
+
         let conversationHistory = messages.map { ["role": $0.role.rawValue, "content": $0.content] }
-        
+
         Task {
             do {
                 let result = try await openAIService.fetchChatResponse(
                     prompt: newMessage.content,
                     conversationHistory: conversationHistory
                 )
-                handleAPIResponse(content: result)
+                await handleAPIResponse(content: result)
             } catch {
-                // Wenn ein Fehler passiert, zeigen wir ihn an
                 self.errorMessage = error.localizedDescription
                 print("Error receiving response: \(error.localizedDescription)")
             }
             isLoading = false
         }
     }
+
     
     func resetChat() {
         chatOutput = "How can I help you?"
@@ -76,7 +91,7 @@ final class ViewModel: ObservableObject {
         errorMessage = nil
     }
     
-    private func handleAPIResponse(content: String) {
+    private func handleAPIResponse(content: String) async {
         let receivedMessage = Message(
             id: UUID(),
             role: .assistant,
@@ -87,11 +102,11 @@ final class ViewModel: ObservableObject {
         
         // Nach jeder erfolgreichen Antwort speichern wir die Daten,
         // damit bei plötzlichem App-Verlassen nichts verloren geht.
-        saveConversationIfNeeded()
+        await saveConversationIfNeeded()
     }
     
     /// Erzeugt oder aktualisiert eine Conversation in SwiftData und speichert.
-    private func saveConversationIfNeeded() {
+    private func saveConversationIfNeeded() async {
         guard let context = modelContext else {
             print("No ModelContext available – skipping save.")
             return

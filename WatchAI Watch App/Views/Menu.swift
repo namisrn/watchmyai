@@ -70,7 +70,7 @@ struct MenuRow: View {
                 .font(.footnote)
                 .foregroundColor(.gray)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 15)
     }
 }
 

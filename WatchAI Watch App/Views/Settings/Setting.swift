@@ -16,7 +16,6 @@ struct SettingItem: Identifiable {
 
 /// Beispielhafte Einstellungsoptionen.
 private let settingItems: [SettingItem] = [
-    SettingItem(title: "Version", destinationView: AnyView(VersionView())),
     SettingItem(title: "What's New", destinationView: AnyView(WhatsNewView())),
     SettingItem(title: "Auto-Update", destinationView: AnyView(AutoUpdateView())),
     SettingItem(title: "Legal Notices", destinationView: AnyView(LegalNoticesView()))
@@ -26,32 +25,36 @@ private let settingItems: [SettingItem] = [
 struct Setting: View {
     var body: some View {
         NavigationStack {
-            List(settingItems) { item in
-                NavigationLink(destination: item.destinationView) {
-                    Text(item.title)
-                        .font(.headline)
-                        .padding(.vertical, 5)
+            List {
+                ForEach(settingItems) { item in
+                    NavigationLink(destination: item.destinationView) {
+                        Text(item.title)
+                            .font(.headline)
+                            .padding(.vertical, 5)
+                    }
+                    .padding(.vertical, 10)
                 }
-                .padding(.vertical, 10)
+                
+                /// Ansicht: Versionsinformationen.
+                Section {
+                    HStack {
+                        Spacer()
+                        VStack {
+                            Text("WatchMyAI")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Version \(VersionManager.AppVersionNumber)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+                .listRowBackground(Color.clear)
             }
             .navigationTitle("Settings")
-            .listStyle(.plain)
+            .listStyle(.carousel)
         }
-    }
-}
-
-/// Ansicht: Versionsinformationen.
-struct VersionView: View {
-    var body: some View {
-        VStack {
-            Text("Version \(VersionManager.AppVersionNumber)")
-                .font(.title2)
-                .padding(.bottom, 5)
-            Text("Build \(VersionManager.AppBuildNumber)")
-                .font(.body)
-        }
-        .navigationTitle("Version")
-        .padding()
     }
 }
 
@@ -59,15 +62,9 @@ struct VersionView: View {
 struct WhatsNewView: View {
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 15) {
-                Section(header: Text("Version 1.2").font(.headline)) {
+            VStack(alignment: .leading, spacing: 5) {
+                Section(header: Text("Version 1.3").font(.headline)) {
                     Text("- Bug fixes and improvements")
-                }
-                Section(header: Text("Version 1.1").font(.headline)) {
-                    Text("- Added Natural Language (NL) support for detecting and matching the user's language.")
-                }
-                Section(header: Text("Version 1.0").font(.headline)) {
-                    Text("- Welcome to WatchMyAI!")
                 }
             }
             .padding()
@@ -123,6 +120,10 @@ struct LegalNoticesView: View {
         }
         .navigationTitle("Legal Notices")
     }
+}
+
+struct VersionManager {
+    static let AppVersionNumber = "1.3"
 }
 
 /// Vorschau für die Settings-Ansicht.
