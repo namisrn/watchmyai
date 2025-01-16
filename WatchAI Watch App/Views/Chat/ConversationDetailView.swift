@@ -14,7 +14,7 @@ struct ConversationDetailView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
-                ForEach(conversation.messages, id: \.self) { message in
+                ForEach(conversation.messages.sorted(by: { $0.createdAt < $1.createdAt }), id: \.self) { message in
                     messageView(for: message)
                 }
             }

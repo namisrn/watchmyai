@@ -63,8 +63,8 @@ struct WhatsNewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 5) {
-                Section(header: Text("Version 1.3").font(.headline)) {
-                    Text("- Bug fixes and improvements")
+                Section(header: Text("Version 1.4").font(.headline)) {
+                    Text("- Bug Fix: Messages in the archive are now displayed in the correct order.")
                 }
             }
             .padding()
@@ -123,7 +123,7 @@ struct LegalNoticesView: View {
 }
 
 struct VersionManager {
-    static let AppVersionNumber = "1.3"
+    static let AppVersionNumber = "1.4"
 }
 
 /// Vorschau für die Settings-Ansicht.

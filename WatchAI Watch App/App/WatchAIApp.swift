@@ -15,7 +15,10 @@ struct WatchAIApp: App {
 
     init() {
         do {
-            container = try ModelContainer(for: Schema([Conversations.self, Chat.self]))
+            container = try ModelContainer(
+                for: Conversations.self, Chat.self,
+                configurations: ModelConfiguration()
+            )
             try APIKeyManager.shared.loadAPIKey()
             print("✅ API-Key erfolgreich geladen.")
         } catch {

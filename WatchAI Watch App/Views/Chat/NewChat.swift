@@ -57,12 +57,14 @@ struct NewChat: View {
                         }
                         ToolbarItem(placement: .bottomBar) {
                             if viewModel.isLoading {
-                                Text("wait...").foregroundColor(.gray)
-                                    .background(.ultraThinMaterial)
+                                Text("Please wait...")
+                                    .foregroundColor(.accentColor)
+                                    .padding(.horizontal)
                                     .frame(height: textFieldHeight(for: watchScreenSize))
-                                    .cornerRadius(20)
-                                
-                            } else {
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(16)
+                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            }else {
                                 // TextField, wenn isLoading false ist
                                 TextField(
                                     "",
@@ -74,7 +76,6 @@ struct NewChat: View {
                                 .cornerRadius(20)
                                 .multilineTextAlignment(.center)
                                 .submitLabel(.send)
-                                //.disabled(viewModel.isLoading)
                                 .onSubmit {
                                     withAnimation(.easeInOut(duration: 0.3)) {
                                         viewModel.sendMessage()

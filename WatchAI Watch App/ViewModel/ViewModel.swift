@@ -133,8 +133,12 @@ final class ViewModel: ObservableObject {
         // Leere zuerst die vorhandenen messages und füge dann erneut hinzu
         conversation.messages.removeAll()
         
-        for vmMessage in messages {
-            let chatMessage = Chat(content: vmMessage.content, sender: vmMessage.role.rawValue)
+        for vmMessage in messages.sorted(by: { $0.createdAt < $1.createdAt }) {
+            let chatMessage = Chat(
+                content: vmMessage.content,
+                sender: vmMessage.role.rawValue,
+                createdAt: vmMessage.createdAt
+            )
             conversation.messages.append(chatMessage)
             context.insert(chatMessage)
         }
