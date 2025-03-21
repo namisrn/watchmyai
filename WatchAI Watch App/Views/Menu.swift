@@ -55,20 +55,22 @@ struct MenuRow: View {
     let item: MenuItem
     
     var body: some View {
-        VStack(alignment: .leading) {
+        HStack(alignment: .center) {
             Image(systemName: item.iconName)
                 .font(.system(size: 30))
                 .foregroundColor(.blue)
+                .padding(2)
+                
+            VStack(alignment: .leading) {
+                Text(item.title)
+                    .font(.title3)
+                    .fontWeight(.medium)
+                Text(item.subtitle)
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+            }
             
-            Spacer()
-            
-            Text(item.title)
-                .font(.title3)
-                .fontWeight(.medium)
-            
-            Text(item.subtitle)
-                .font(.footnote)
-                .foregroundColor(.gray)
+
         }
         .padding(.vertical, 15)
     }

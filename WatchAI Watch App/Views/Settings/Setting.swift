@@ -26,50 +26,126 @@ struct Setting: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(settingItems) { item in
-                    NavigationLink(destination: item.destinationView) {
-                        Text(item.title)
-                            .font(.headline)
-                            .padding(.vertical, 5)
+                // Haupteinstellungen
+                Section {
+                    ForEach(settingItems) { item in
+                        NavigationLink(destination: item.destinationView) {
+                            HStack {
+                                // Icon für jede Einstellung
+                                Image(systemName: iconName(for: item.title))
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24)
+                                
+                                Text(item.title)
+                                    .font(.system(size: 16))
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.vertical, 8)
+                        }
                     }
-                    .padding(.vertical, 10)
                 }
                 
-                /// Ansicht: Versionsinformationen.
+                // Versionsinformationen
                 Section {
-                    HStack {
-                        Spacer()
-                        VStack {
+                    VStack(spacing: 12) {
+                        // App Icon
+                        Image(systemName:"bubble.left.and.text.bubble.right")
+                            .font(.system(size: 40))
+                            .foregroundColor(.blue)
+                            .padding(.bottom, 4)
+                        
+                        // App Name und Version
+                        VStack(spacing: 4) {
                             Text("WatchMyAI")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 18, weight: .semibold))
+                            
                             Text("Version \(VersionManager.AppVersionNumber)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
                         }
-                        Spacer()
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
                 }
                 .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
             .navigationTitle("Settings")
             .listStyle(.carousel)
         }
     }
+    
+    // Hilfsfunktion für Icon-Namen
+    private func iconName(for title: String) -> String {
+        switch title {
+        case "What's New":
+            return "sparkles"
+        case "Auto-Update":
+            return "arrow.triangle.2.circlepath"
+        case "Legal Notices":
+            return "doc.text"
+        default:
+            return "gear"
+        }
+    }
 }
 
-/// Ansicht: "Was gibt's Neues?".
+/// View: "What's New?"
 struct WhatsNewView: View {
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 5) {
-                Section(header: Text("Version 1.4").font(.headline)) {
-                    Text("- Bug Fix: Messages in the archive are now displayed in the correct order.")
+            VStack(alignment: .leading, spacing: 16) {
+                // Version Header
+                HStack {
+                    Text("Version 1.5")
+                        .font(.system(size: 20, weight: .bold))
+                    Spacer()
+                    Text("March 2025")
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                }
+                .padding(.bottom, 8)
+                
+                // Features
+                VStack(alignment: .leading, spacing: 12) {
+                    FeatureRow(icon: "checkmark.shield", text: "Improved Stability: Optimizations for reliable chatting on your Apple Watch.")
+                    FeatureRow(icon: "bolt", text: "Better Performance: Faster responses and extended battery life.")
+                    FeatureRow(icon: "memorychip", text: "Optimized Memory: Smoother experience, especially during longer chats.")
+                    FeatureRow(icon: "lock.shield", text: "Reliable Data Storage: Securely saves your conversations.")
+                    FeatureRow(icon: "sparkles", text: "Enhanced UI: Smoother animations and better visual feedback.")
+                    FeatureRow(icon: "arrow.up.and.down", text: "Improved Scrolling: Better chat navigation and message visibility.")
+                    FeatureRow(icon: "bolt.circle", text: "Quick Actions: Faster access to common chat functions.")
+                    FeatureRow(icon: "exclamationmark.circle", text: "Better Feedback: Clearer loading states and error messages.")
                 }
             }
             .padding()
         }
         .navigationTitle("What's New")
+    }
+}
+
+// Feature Row Component
+struct FeatureRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(.blue)
+                .frame(width: 24)
+            
+            Text(text)
+                .font(.system(size: 15))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -123,7 +199,7 @@ struct LegalNoticesView: View {
 }
 
 struct VersionManager {
-    static let AppVersionNumber = "1.4"
+    static let AppVersionNumber = "1.5"
 }
 
 /// Vorschau für die Settings-Ansicht.

@@ -6,9 +6,14 @@
 //
 
 import Foundation
+import Combine
 
-/// Klasse zur Verwaltung globaler App-States (z.B. Fehler, Ladezustände).
-final class AppState: ObservableObject {
+/// Class for managing global app state (e.g., errors, loading states)
+class AppState: ObservableObject {
     @Published var isDataStorageFailed: Bool = false
     @Published var alertMessage: String? = nil
+    
+    // Additional global app state properties
+    @Published var isOnboarded: Bool = true
+    @Published var isApiKeyConfigured: Bool = false
 }
