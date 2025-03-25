@@ -21,6 +21,24 @@ struct NewChat: View {
     // Optimierung: behalte eindeutige ID für View-Lebenszyklus-Identifikation
     private let viewId = UUID().uuidString
     
+    // Error types for the view
+    enum ChatViewError: Error {
+        case dictationFailed
+        case invalidInput
+        case cancelled
+        
+        var localizedDescription: String {
+            switch self {
+            case .dictationFailed:
+                return "Could not start dictation. Please try again."
+            case .invalidInput:
+                return "No text was detected. Please try speaking more clearly."
+            case .cancelled:
+                return "Dictation was cancelled."
+            }
+        }
+    }
+    
     // Quick reply options
     private let quickReplies = [
         "What's the weather?",
@@ -32,11 +50,9 @@ struct NewChat: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Optimierte ScrollView mit verbessertem Lazy Loading
                 ScrollViewReader { scrollView in
                     ScrollView {
                         VStack(spacing: 0) {
-                            // Nachrichten mit optimiertem Lazy Loading
                             LazyVStack(spacing: 8) {
                                 // Assistant welcome message
                                 Text("How can I help you?")
@@ -50,31 +66,25 @@ struct NewChat: View {
                                     .padding(.top, 4)
                                     .id("welcome")
 
-                                // Optimiertes Message Rendering mit Lazy Loading
                                 ForEach(viewModel.messages) { message in
                                     messageView(for: message)
                                         .id(message.id)
                                         .transition(.opacity.combined(with: .move(edge: .bottom)))
-                                        // Optimierung: Lazy Loading für Nachrichten
                                         .onAppear {
-                                            // Nachricht wird nur geladen, wenn sie sichtbar wird
                                             if message.id == viewModel.messages.last?.id {
                                                 scrollToInput(scrollView: scrollView)
                                             }
                                         }
                                 }
                                 
-                                // Abstand zwischen letzter Nachricht und Eingabefeld
                                 Spacer().frame(height: 6)
                                 
-                                // Eingabebereich in der gleichen ScrollView
                                 HStack(spacing: 8) {
-                                    // Input buttons
                                     if !viewModel.isLoading {
-                                        // Dictation button
                                         Button(action: {
-                                            // Starte die watchOS-Diktierfunktion
-                                            presentDictationController()
+                                            Task {
+                                                await presentDictationController()
+                                            }
                                         }) {
                                             Image(systemName: "plus")
                                                 .font(.system(size: 16))
@@ -85,7 +95,6 @@ struct NewChat: View {
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                         
-                                        // iMessage-style input field
                                         TextField(
                                             "",
                                             text: $viewModel.currentInput,
@@ -96,21 +105,23 @@ struct NewChat: View {
                                         .cornerRadius(20)
                                         .submitLabel(.send)
                                         .onSubmit {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                viewModel.sendMessage()
+                                            Task {
+                                                do {
+                                                    try await viewModel.sendMessage()
+                                                } catch {
+                                                    viewModel.setErrorMessage(error.localizedDescription)
+                                                }
                                             }
                                         }
                                         .contentShape(Rectangle())
                                         .buttonStyle(PlainButtonStyle())
                                         .accentColor(.blue)
-                                        // Optimierung: Tastatur sofort ausblenden nach Submit
                                         .onChange(of: viewModel.isLoading) { oldValue, newValue in
                                             if newValue {
                                                 dismissKeyboard()
                                             }
                                         }
                                     } else {
-                                        // Verbesserter Ladeindikator
                                         loadingIndicator
                                     }
                                 }
@@ -119,13 +130,45 @@ struct NewChat: View {
                                 .background(Color.clear)
                                 .id("inputField")
                                 
-                                // Zusätzlicher Raum am Ende für besseres Scrollen
+                                if !viewModel.followUpQuestions.isEmpty {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Suggestions:")
+                                            .font(.caption2)
+                                            .foregroundColor(.white)
+                                            .padding(.leading, 8)
+                                        
+                                        ForEach(viewModel.followUpQuestions, id: \.self) { question in
+                                            Button(action: {
+                                                viewModel.currentInput = question
+                                                Task {
+                                                    do {
+                                                        try await viewModel.sendMessage()
+                                                    } catch {
+                                                        viewModel.setErrorMessage(error.localizedDescription)
+                                                    }
+                                                }
+                                            }) {
+                                                Text(question)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.white)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 8)
+                                                    .background(Color.blue.opacity(0.3))
+                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                }
+                                
                                 Spacer().frame(height: 20)
                             }
                             .padding(.horizontal, 4)
                         }
                         .onChange(of: viewModel.messages) { oldValue, newValue in
-                            // Optimierte Scroll-Logik
                             if let lastMessage = newValue.last {
                                 withAnimation(.easeOut(duration: 0.2)) {
                                     scrollView.scrollTo(lastMessage.id, anchor: .bottom)
@@ -133,7 +176,6 @@ struct NewChat: View {
                             }
                         }
                         .onAppear {
-                            // Initiales Scrollen zum Eingabefeld
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 withAnimation {
                                     scrollToInput(scrollView: scrollView)
@@ -151,7 +193,6 @@ struct NewChat: View {
             viewModel.resetChat()
         }
         .onDisappear {
-            // Optimierung: Ressourcen freigeben, wenn View verschwindet
             viewModel.cleanup()
         }
         .alert("Error", isPresented: $viewModel.showErrorAlert) {
@@ -165,52 +206,64 @@ struct NewChat: View {
             Text(viewModel.errorMessage ?? "Unknown error")
         }
         .preferredColorScheme(.dark)
-        // Registriere das ViewModel für das Lebenszyklusmanagement
         .registerViewModel(viewModel, id: viewId)
-        // Einfache Methode für Textdiktat - nutzt direkt die nativen Diktieroption auf der Apple Watch
         .onTapGesture(count: 2) {
-            // Doppeltippen für schnelle Diktierfunktion als Alternative
-            presentDictationController()
+            Task {
+                await presentDictationController()
+            }
         }
     }
 
-    // Funktion zum Zeigen des nativen Diktier-Dialogs
-    private func presentDictationController() {
+    private func presentDictationController() async {
         #if os(watchOS)
-        DispatchQueue.main.async {
-            if let rootController = WKExtension.shared().rootInterfaceController {
+        guard let rootController = WKExtension.shared().rootInterfaceController else { return }
+        
+        do {
+            // Generiere dynamische Vorschläge basierend auf der Konversationshistorie
+            let suggestions = try await viewModel.generateSuggestions()
+            
+            let result = try await withCheckedThrowingContinuation { continuation in
                 rootController.presentTextInputController(
-                    withSuggestions: ["How are you", "Tell me a joke", "What time is it"],
+                    withSuggestions: suggestions,
                     allowedInputMode: .plain
                 ) { results in
-                    if let result = results?.first as? String, !result.isEmpty {
-                        DispatchQueue.main.async {
-                            self.viewModel.currentInput = result
-                            self.viewModel.sendMessage()
+                    if let results = results {
+                        if let result = results.first as? String, !result.isEmpty {
+                            continuation.resume(returning: result)
+                        } else {
+                            continuation.resume(throwing: ChatViewError.invalidInput)
                         }
+                    } else {
+                        continuation.resume(throwing: ChatViewError.cancelled)
                     }
                 }
             }
+            
+            viewModel.currentInput = result
+            try await viewModel.sendMessage()
+        } catch ChatViewError.cancelled {
+            // Silently ignore cancellation
+            return
+        } catch ChatViewError.invalidInput {
+            viewModel.setErrorMessage("No text was detected. Please try speaking more clearly.")
+        } catch {
+            viewModel.setErrorMessage(error.localizedDescription)
         }
         #endif
     }
 
-    // Funktion zum Ausblenden der Tastatur
     private func dismissKeyboard() {
         #if os(iOS)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         #endif
     }
 
-    // Verbesserter Ladeindikator
     private var loadingIndicator: some View {
         HStack(spacing: 8) {
-            // Einfacher Punktindikator mit passender Farbe je nach Ladezustand
             Circle()
                 .fill(loadingStageColor)
                 .frame(width: 8, height: 8)
             
-            // Kurzer, prägnanter Text
             Text(loadingStageText)
                 .font(.footnote)
                 .foregroundColor(.gray)
@@ -223,7 +276,6 @@ struct NewChat: View {
         .padding(.leading, 12)
     }
     
-    // Bestimme Text basierend auf Ladezustand
     private var loadingStageText: String {
         switch viewModel.loadingStage {
         case .thinking:
@@ -237,7 +289,6 @@ struct NewChat: View {
         }
     }
     
-    // Bestimme Farbe basierend auf Ladezustand
     private var loadingStageColor: Color {
         switch viewModel.loadingStage {
         case .thinking:
@@ -251,14 +302,12 @@ struct NewChat: View {
         }
     }
 
-    // Optimierte Scroll-Funktion
     private func scrollToInput(scrollView: ScrollViewProxy) {
         withAnimation(.easeOut(duration: 0.2)) {
             scrollView.scrollTo("inputField", anchor: .bottom)
         }
     }
 
-    // Optimierte Message View mit Caching
     private func messageView(for message: Message) -> some View {
         HStack {
             if message.role == .assistant {
@@ -287,7 +336,6 @@ struct NewChat: View {
             }
         }
         .padding(.vertical, 2)
-        // Optimierung: View-Caching für bessere Performance
         .drawingGroup()
     }
 

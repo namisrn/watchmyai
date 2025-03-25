@@ -103,10 +103,10 @@ struct WhatsNewView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Version Header
                 HStack {
-                    Text("Version 1.5")
+                    Text("Version 1.6")
                         .font(.system(size: 20, weight: .bold))
                     Spacer()
-                    Text("March 2025")
+                    Text("April 2025")
                         .font(.system(size: 14))
                         .foregroundColor(.gray)
                 }
@@ -114,14 +114,8 @@ struct WhatsNewView: View {
                 
                 // Features
                 VStack(alignment: .leading, spacing: 12) {
-                    FeatureRow(icon: "checkmark.shield", text: "Improved Stability: Optimizations for reliable chatting on your Apple Watch.")
-                    FeatureRow(icon: "bolt", text: "Better Performance: Faster responses and extended battery life.")
-                    FeatureRow(icon: "memorychip", text: "Optimized Memory: Smoother experience, especially during longer chats.")
-                    FeatureRow(icon: "lock.shield", text: "Reliable Data Storage: Securely saves your conversations.")
-                    FeatureRow(icon: "sparkles", text: "Enhanced UI: Smoother animations and better visual feedback.")
-                    FeatureRow(icon: "arrow.up.and.down", text: "Improved Scrolling: Better chat navigation and message visibility.")
-                    FeatureRow(icon: "bolt.circle", text: "Quick Actions: Faster access to common chat functions.")
-                    FeatureRow(icon: "exclamationmark.circle", text: "Better Feedback: Clearer loading states and error messages.")
+                    FeatureRow(icon: "checkmark.shield", text: "AI Reply.")
+
                 }
             }
             .padding()
@@ -199,7 +193,7 @@ struct LegalNoticesView: View {
 }
 
 struct VersionManager {
-    static let AppVersionNumber = "1.5"
+    static let AppVersionNumber = "1.6"
 }
 
 /// Vorschau für die Settings-Ansicht.

@@ -29,13 +29,12 @@ final class ConversationManager {
     func saveConversation(
         messages: [Message],
         context: ModelContext,
-        currentConversation: Conversations? = nil
+        currentConversation: Conversations?
     ) async -> Conversations {
-        
         // If no conversation exists yet, create one
         var conversation = currentConversation
         if conversation == nil {
-            let title = generateTitle(from: messages)
+            let title = await generateTitle(from: messages)
             let newConversation = Conversations(
                 title: title,
                 createdDate: Date(),
@@ -48,16 +47,14 @@ final class ConversationManager {
         
         // Ensure we have a conversation
         guard let conversation = conversation else {
-            os_log("Failed to create or access conversation", log: OSLog.default, type: .error)
             fatalError("Could not create or access conversation")
         }
         
         // Update the conversation
         conversation.updateLastModified()
-        conversation.title = generateTitle(from: messages)
+        conversation.title = await generateTitle(from: messages)
         
         // First remove existing message connections
-        // We'll preserve the Chat objects but rebuild the relationship
         conversation.messages.removeAll()
         
         // Add each message to the conversation
@@ -67,17 +64,14 @@ final class ConversationManager {
                 sender: vmMessage.role.rawValue,
                 createdAt: vmMessage.createdAt
             )
-            // Add to the conversation's messages
             conversation.messages.append(chatMessage)
-            // Insert into the context
             context.insert(chatMessage)
         }
         
         do {
             try context.save()
-            os_log("Conversation saved successfully with %d messages", log: OSLog.default, type: .info, conversation.messages.count)
         } catch {
-            os_log("Error saving the conversation: %@", log: OSLog.default, type: .error, error.localizedDescription)
+            print("Error saving conversation: \(error)")
         }
         
         return conversation
@@ -86,38 +80,27 @@ final class ConversationManager {
     /// Loads all conversations from the context
     /// - Parameter context: The SwiftData context
     /// - Returns: Array of conversations
-    func loadConversations(context: ModelContext) -> [Conversations] {
-        let descriptor = FetchDescriptor<Conversations>(sortBy: [SortDescriptor(\.lastModified, order: .reverse)])
+    func loadConversations(context: ModelContext) async throws -> [Conversations] {
+        let descriptor = FetchDescriptor<Conversations>(
+            sortBy: [SortDescriptor(\.lastModified, order: .reverse)]
+        )
         
-        do {
-            let result = try context.fetch(descriptor)
-            os_log("Successfully fetched %d conversations", log: OSLog.default, type: .info, result.count)
-            return result
-        } catch {
-            os_log("Error fetching conversations: %@", log: OSLog.default, type: .error, error.localizedDescription)
-            return []
-        }
+        return try context.fetch(descriptor)
     }
     
     /// Deletes a conversation from the context
     /// - Parameters:
     ///   - conversation: The conversation to delete
     ///   - context: The SwiftData context
-    func deleteConversation(_ conversation: Conversations, context: ModelContext) {
+    func deleteConversation(_ conversation: Conversations, context: ModelContext) async throws {
         context.delete(conversation)
-        
-        do {
-            try context.save()
-            os_log("Conversation deleted successfully", log: OSLog.default, type: .info)
-        } catch {
-            os_log("Error deleting conversation: %@", log: OSLog.default, type: .error, error.localizedDescription)
-        }
+        try context.save()
     }
     
     /// Generates a title for the conversation based on the first message
     /// - Parameter messages: The messages
     /// - Returns: The generated title
-    private func generateTitle(from messages: [Message]) -> String {
+    private func generateTitle(from messages: [Message]) async -> String {
         let maxTitleLength = 50
         let baseTitle = messages.first?.content ?? "New Conversation"
         return String(baseTitle.prefix(maxTitleLength))
@@ -187,5 +170,21 @@ final class ConversationManager {
             os_log("Error searching conversations: %@", log: OSLog.default, type: .error, error.localizedDescription)
             return []
         }
+    }
+    
+    /// Optimiert the conversations in the context
+    func optimizeConversations(context: ModelContext) async throws {
+        let conversations = try await loadConversations(context: context)
+        
+        for conversation in conversations {
+            // Remove duplicate messages
+            let uniqueMessages = Array(Set(conversation.messages))
+            conversation.messages = uniqueMessages
+            
+            // Update the last modified date
+            conversation.updateLastModified()
+        }
+        
+        try context.save()
     }
 } 

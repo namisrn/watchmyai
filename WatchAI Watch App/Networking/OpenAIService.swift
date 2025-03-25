@@ -5,9 +5,9 @@
 //  Created by Sasan Rafat Nami on 27.12.24.
 //
 
-import Alamofire
 import Foundation
 import WatchKit
+import Combine
 
 final class OpenAIService {
     static let shared = OpenAIService()
@@ -15,11 +15,12 @@ final class OpenAIService {
     // Cache for storing recent responses
     private var responseCache = NSCache<NSString, NSString>()
     private let cacheDuration: TimeInterval = 60 * 30 // 30 minutes cache validity
-    private var cacheTimes = [String: Date]()
+    private var cacheTimes = [NSString: Date]()
     private let cacheLimit = 20 // Maximum number of cached items
     
     // Performance optimization: Add memory warning observer
     private var memoryWarningObserver: NSObjectProtocol?
+    private var cancellables = Set<AnyCancellable>()
     
     private init() {
         // Configure cache limits
@@ -65,7 +66,7 @@ final class OpenAIService {
         }
 
         // Header für die Anfrage
-        let headers: HTTPHeaders = [
+        let headers: [String: String] = [
             "Authorization": "Bearer \(apiKey)",
             "Content-Type": "application/json"
         ]
@@ -81,23 +82,44 @@ final class OpenAIService {
             "frequency_penalty": 0.5
         ]
 
-        // API-Anfrage mit Alamofire
-        let response = try await retryAsync(retries: 3) {
-            try await AF.request(Constants.apiBaseURL, method: .post, parameters: parameters, encoding: JSONEncoding.default, headers: headers)
-                .serializingDecodable(OpenAIResponse.self)
-                .value
+        guard let url = URL(string: Constants.apiBaseURL) else {
+            throw AppError.invalidURL
+        }
+
+        // API-Anfrage mit URLSession + Combine
+        let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+            let publisher: AnyPublisher<OpenAIResponse, Error> = NetworkingService.shared.post(url: url, headers: headers, body: parameters)
+            
+            let cancellable = publisher
+                .receive(on: DispatchQueue.main)
+                .sink(
+                    receiveCompletion: { completion in
+                        switch completion {
+                        case .finished:
+                            break
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    },
+                    receiveValue: { response in
+                        let responseText = response.choices.first?.message.content ?? ""
+                        continuation.resume(returning: responseText)
+                    }
+                )
+            
+            // Store cancellable in a local variable to prevent deallocation
+            let localCancellable = cancellable
+            cancellables.insert(localCancellable)
         }
         
-        let responseText = response.choices.first?.message.content ?? ""
-        
         // Cache the response
-        cacheResponse(responseText, for: cacheKey)
+        cacheResponse(response, for: cacheKey)
         
-        return responseText
+        return response
     }
 
     // Private method to generate a cache key
-    private func generateCacheKey(prompt: String, conversationHistory: [[String: String]]) -> String {
+    private func generateCacheKey(prompt: String, conversationHistory: [[String: String]]) -> NSString {
         // Simple cache key generation - combine the last few messages
         var keySources: [String] = []
         
@@ -113,16 +135,19 @@ final class OpenAIService {
         
         // Combine and hash for the key
         let combined = keySources.joined(separator: "|||")
-        return combined.hashValue.description
+        return combined as NSString
     }
     
     // Check if there's a valid cached response
-    private func checkCache(for key: String) -> String? {
-        let nsKey = key as NSString
-        
+    private func checkCache(for key: NSString) -> String? {
         // Check if we have a cached item
-        guard let cachedResponse = responseCache.object(forKey: nsKey) as String?,
-              let cacheTime = cacheTimes[key] else {
+        guard let cachedResponse = responseCache.object(forKey: key) else {
+            return nil
+        }
+        
+        // Check if we have a valid cache time
+        guard let cacheTime = cacheTimes[key] else {
+            responseCache.removeObject(forKey: key)
             return nil
         }
         
@@ -130,18 +155,20 @@ final class OpenAIService {
         let now = Date()
         if now.timeIntervalSince(cacheTime) > cacheDuration {
             // Cache expired
-            responseCache.removeObject(forKey: nsKey)
+            responseCache.removeObject(forKey: key)
             cacheTimes.removeValue(forKey: key)
             return nil
         }
         
-        return cachedResponse
+        return cachedResponse as String
     }
     
     // Cache a response
-    private func cacheResponse(_ response: String, for key: String) {
-        let nsKey = key as NSString
-        responseCache.setObject(response as NSString, forKey: nsKey)
+    private func cacheResponse(_ response: String, for key: NSString) {
+        let nsResponse = response as NSString
+        
+        // Store in cache
+        responseCache.setObject(nsResponse, forKey: key)
         cacheTimes[key] = Date()
         
         // Clean up old cache entries if we exceed the limit
@@ -152,7 +179,7 @@ final class OpenAIService {
             
             for key in oldestKeys {
                 cacheTimes.removeValue(forKey: key)
-                responseCache.removeObject(forKey: key as NSString)
+                responseCache.removeObject(forKey: key)
             }
         }
     }
@@ -166,52 +193,63 @@ final class OpenAIService {
         messages.append(["role": "user", "content": prompt])
         return messages
     }
-
-
-    // Hilfsfunktion für eine Retry-Policy
-    private func retryAsync<T>(retries: Int, task: @escaping () async throws -> T) async throws -> T {
-        var attempts = 0
-        while attempts < retries {
-            do {
-                return try await task()
-            } catch {
-                attempts += 1
-                
-                // Check for specific error types for better error handling
-                if let urlError = error as? URLError {
-                    switch urlError.code {
-                    case .notConnectedToInternet, .networkConnectionLost:
-                        throw AppError.networkError(error)
-                    case .timedOut:
-                        throw AppError.timeoutError
-                    default:
-                        break
-                    }
-                }
-                
-                // Check for HTTP status codes
-                if let afError = error as? AFError, 
-                   let responseCode = afError.responseCode {
-                    switch responseCode {
-                    case 401:
-                        throw AppError.authenticationError
-                    case 429:
-                        throw AppError.rateLimitExceeded
-                    case 500...599:
-                        throw AppError.serverError
-                    default:
-                        break
-                    }
-                }
-                
-                if attempts == retries {
-                    throw error
-                }
-                
-                // Exponential backoff
-                try? await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempts)) * 100_000_000))
-            }
+    
+    // Generate follow-up questions based on the response
+    func generateFollowUpQuestions(for response: String) async throws -> [String] {
+        let prompt = """
+        Based on this response: "\(response)"
+        Generate 3 very short follow-up questions (max 5-7 words each) that would help the user explore the topic further.
+        Format: Return only the questions, one per line, without numbering or additional text.
+        Keep questions extremely concise and focused.
+        """
+        
+        guard let apiKey = APIKeyManager.shared.apiKey,
+              let url = URL(string: Constants.apiBaseURL) else {
+            throw AppError.noApiKey
         }
-        throw AppError.unknownError
+        
+        let headers: [String: String] = [
+            "Authorization": "Bearer \(apiKey)",
+            "Content-Type": "application/json"
+        ]
+        
+        let parameters: [String: Any] = [
+            "model": Constants.defaultModel,
+            "messages": [["role": "system", "content": prompt]],
+            "temperature": 0.7,
+            "max_tokens": 100,
+            "top_p": 0.9
+        ]
+        
+        let questionsText = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+            let publisher: AnyPublisher<OpenAIResponse, Error> = NetworkingService.shared.post(url: url, headers: headers, body: parameters)
+            
+            let cancellable = publisher
+                .receive(on: DispatchQueue.main)
+                .sink(
+                    receiveCompletion: { completion in
+                        switch completion {
+                        case .finished:
+                            break
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                    },
+                    receiveValue: { response in
+                        let text = response.choices.first?.message.content ?? ""
+                        continuation.resume(returning: text)
+                    }
+                )
+            
+            // Store cancellable in a local variable to prevent deallocation
+            let localCancellable = cancellable
+            cancellables.insert(localCancellable)
+        }
+        
+        return questionsText.components(separatedBy: CharacterSet.newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .prefix(3)
+            .map { $0 }
     }
 }

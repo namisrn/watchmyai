@@ -19,4 +19,13 @@ struct Message: Codable, Identifiable, Equatable {
     let role: SenderRole
     let content: String
     let createdAt: Date
+    var isRead: Bool
+    
+    init(id: UUID = UUID(), role: SenderRole, content: String, createdAt: Date = Date(), isRead: Bool = false) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.createdAt = createdAt
+        self.isRead = isRead
+    }
 }

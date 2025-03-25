@@ -29,6 +29,7 @@ final class ViewModel: ObservableObject, Equatable {
     @Published var userHasSentMessage: Bool = false
     @Published var errorMessage: String? = nil
     @Published var showErrorAlert: Bool = false
+    @Published var followUpQuestions: [String] = []
     
     // Verbesserte Ladezustände
     @Published var loadingStage: LoadingStage = .thinking
@@ -52,6 +53,27 @@ final class ViewModel: ObservableObject, Equatable {
     // SwiftData context
     var modelContext: ModelContext?
     var currentConversation: Conversations? = nil
+    
+    // Verbesserte Error-Typen
+    enum ViewModelError: Error {
+        case invalidInput(String)
+        case networkError(ChatService.ChatError)
+        case processingError(String)
+        case savingError(String)
+        
+        var localizedDescription: String {
+            switch self {
+            case .invalidInput(let message):
+                return "Ungültige Eingabe: \(message)"
+            case .networkError(let error):
+                return error.localizedDescription
+            case .processingError(let message):
+                return "Verarbeitungsfehler: \(message)"
+            case .savingError(let message):
+                return "Speicherfehler: \(message)"
+            }
+        }
+    }
     
     init() {
         // Subscribe to loading stage changes from chat service
@@ -86,128 +108,134 @@ final class ViewModel: ObservableObject, Equatable {
         self.showErrorAlert = true
     }
     
-    func sendMessage() {
-        guard !currentInput.isEmpty else { return }
-        isLoading = true
+    // Thread-safe message updates
+    private func updateMessages(adding message: Message) async {
+        await MainActor.run {
+            messages.append(message)
+            userHasSentMessage = true
+            isLoading = true
+            
+            if messages.count > maxMessagesInMemory {
+                messages = Array(messages.suffix(maxMessagesInMemory))
+            }
+        }
+    }
+    
+    // Verbesserte Fehlerbehandlung mit async/await
+    func sendMessage() async throws(ViewModelError) {
+        guard !currentInput.isEmpty else {
+            throw ViewModelError.invalidInput("Leere Nachricht")
+        }
         
         let userInput = currentInput
         currentInput = ""
-
-        // Create and add the new message
+        
         let newMessage = Message(
             id: UUID(),
             role: .user,
             content: userInput,
-            createdAt: Date()
+            createdAt: .now,
+            isRead: true
         )
         
-        messages.append(newMessage)
-        userHasSentMessage = true
+        await updateMessages(adding: newMessage)
         
-        // Limit the number of messages in memory
-        if messages.count > maxMessagesInMemory {
-            messages = Array(messages.suffix(maxMessagesInMemory))
+        do {
+            try await processMessageRequest(newMessage)
+        } catch let error as ChatService.ChatError {
+            throw ViewModelError.networkError(error)
+        } catch {
+            throw ViewModelError.processingError(error.localizedDescription)
         }
-        
-        processMessageRequest(newMessage)
     }
-
-    // Wiederholungsfunktion für Nachrichten
-    func retrySendingMessage(_ content: String) {
-        guard !isLoading else { return }
-        
-        isLoading = true
-        
-        // Cancel any existing API task
+    
+    private func processMessageRequest(_ message: Message) async throws {
         apiTask?.cancel()
-        
-        // Reset loading progress
         loadingProgress = 0.0
         
-        // Create a new task for the API call
-        apiTask = Task {
+        do {
+            async let response = chatService.sendMessage(
+                userMessage: message,
+                conversationHistory: messages
+            )
+            
+            async let questions = chatService.generateFollowUpQuestions(
+                for: message.content
+            )
+            
+            let (result, followUps) = try await (response, questions)
+            
+            if Task.isCancelled { return }
+            
+            await handleAPIResponse(content: result)
+            self.followUpQuestions = followUps
+            
+        } catch {
+            throw ViewModelError.processingError("Fehler bei der Nachrichtenverarbeitung")
+        }
+    }
+    
+    func retrySendingMessage(_ content: String) {
+        guard !isLoading else { return }
+        isLoading = true
+        loadingProgress = 0.0
+        
+        Task {
             do {
                 let result = try await chatService.retryMessage(
                     content: content,
                     conversationHistory: messages
                 )
                 
-                // Check if task was cancelled
                 if Task.isCancelled { return }
                 
                 await handleAPIResponse(content: result)
             } catch {
                 await handleError(error)
-                // Bei Fehler den Ladezustand zurücksetzen
                 isLoading = false
             }
-            
-            // Loading wird jetzt in handleAPIResponse zurückgesetzt
-        }
-    }
-
-    // Separated message processing logic for reuse
-    private func processMessageRequest(_ message: Message) {
-        // Cancel any existing API task
-        apiTask?.cancel()
-        
-        // Reset loading progress
-        loadingProgress = 0.0
-        
-        // Create a new task for the API call
-        apiTask = Task {
-            do {
-                let result = try await chatService.sendMessage(
-                    userMessage: message,
-                    conversationHistory: messages
-                )
-                
-                // Check if task was cancelled
-                if Task.isCancelled { return }
-                
-                await handleAPIResponse(content: result)
-            } catch {
-                await handleError(error)
-                // Bei Fehler den Ladezustand zurücksetzen
-                isLoading = false
-            }
-            
-            // Loading wird jetzt in handleAPIResponse zurückgesetzt
         }
     }
     
-    // Handle API errors
-    private func handleError(_ error: Error) async {
-        if !Task.isCancelled {
-            // Verbesserte Fehlermeldungen
-            if let appError = error as? AppError {
-                switch appError {
-                case .noApiKey:
-                    self.errorMessage = "API key missing. Please add your OpenAI API key in settings."
-                case .rateLimitExceeded:
-                    self.errorMessage = "Rate limit exceeded. Please try again in a moment."
-                case .networkError:
-                    self.errorMessage = "Network error. Please check your connection and try again."
-                case .serverError:
-                    self.errorMessage = "OpenAI server error. Please try again later."
-                case .timeoutError:
-                    self.errorMessage = "Request timed out. Please check your connection."
-                case .authenticationError:
-                    self.errorMessage = "Authentication error. Please check your API key."
-                case .unknownError:
-                    self.errorMessage = "Unknown error occurred. Please try again."
-                default:
-                    self.errorMessage = "Error: \(appError.localizedDescription)"
-                }
-            } else {
-                self.errorMessage = "Error: \(error.localizedDescription)"
+    private func handleAPIResponse(content: String) async {
+        let receivedMessage = Message(
+            id: UUID(),
+            role: .assistant,
+            content: content,
+            createdAt: .now,
+            isRead: false
+        )
+        
+        await MainActor.run {
+            messages.append(receivedMessage)
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
+                isLoading = false
             }
+        }
+        
+        await saveConversationBatched()
+    }
+    
+    private func saveConversationBatched() async {
+        saveTask?.cancel()
+        
+        saveTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
             
-            self.showErrorAlert = true
-            print("Error receiving response: \(error.localizedDescription)")
+            if Task.isCancelled { return }
+            
+            await saveConversationIfNeeded()
         }
     }
-
+    
+    private func handleError(_ error: Error) async {
+        await MainActor.run {
+            errorMessage = error.localizedDescription
+            showErrorAlert = true
+        }
+    }
+    
     // Animate loading progress for better user feedback
     private func animateLoadingProgress() {
         // Reset progress
@@ -239,58 +267,6 @@ final class ViewModel: ObservableObject, Equatable {
         errorMessage = nil
     }
     
-    private func handleAPIResponse(content: String) async {
-        let receivedMessage = Message(
-            id: UUID(),
-            role: .assistant,
-            content: content,
-            createdAt: Date()
-        )
-        
-        // Nachricht zur Liste hinzufügen - löst den UI-Update aus
-        await MainActor.run {
-            messages.append(receivedMessage)
-            // Kurze Verzögerung, damit der Scroll-Animation nach dem Update ausgelöst wird
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 50_000_000) // 50ms Verzögerung
-                isLoading = false
-            }
-        }
-        
-        // Use batched saving instead of saving immediately
-        saveConversationBatched()
-    }
-    
-    // Batched saving implementation
-    private func saveConversationBatched() {
-        // Cancel any existing save task
-        saveTask?.cancel()
-        
-        // Create a new save task with a delay
-        saveTask = Task { @MainActor in
-            // Add a delay to batch multiple rapid saves
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-            
-            if Task.isCancelled { return }
-            
-            await saveConversationIfNeeded()
-        }
-    }
-    
-    // Cleanup method to be called when the app goes to background
-    func cleanup() {
-        apiTask?.cancel()
-        apiTask = nil
-        
-        // Force save any pending changes
-        saveTask?.cancel()
-        saveTask = nil
-        
-        Task {
-            await saveConversationIfNeeded()
-        }
-    }
-    
     /// Erzeugt oder aktualisiert eine Conversation in SwiftData und speichert.
     private func saveConversationIfNeeded() async {
         guard let context = modelContext else {
@@ -306,5 +282,80 @@ final class ViewModel: ObservableObject, Equatable {
             context: context,
             currentConversation: currentConversation
         )
+    }
+    
+    /// Cleanup method to be called when the app goes to background or view disappears
+    func cleanup() {
+        // Cancel any ongoing API tasks
+        apiTask?.cancel()
+        apiTask = nil
+        
+        // Cancel any pending save operations
+        saveTask?.cancel()
+        saveTask = nil
+        
+        // Force save any pending changes
+        Task {
+            await saveConversationIfNeeded()
+        }
+        
+        // Clean up Combine subscriptions
+        loadingCancellable?.cancel()
+        loadingCancellable = nil
+    }
+    
+    // Improved message management
+    var unreadMessageCount: Int {
+        messages.count(where: { !$0.isRead })
+    }
+    
+    var lastMessage: Message? {
+        messages.last
+    }
+    
+    var messagesByDate: [(Date, [Message])] {
+        Dictionary(grouping: messages) { 
+            Calendar.current.startOfDay(for: $0.createdAt)
+        }
+        .sorted { $0.key > $1.key }
+    }
+    
+    /// Generiert dynamische Vorschläge basierend auf der Konversationshistorie
+    func generateSuggestions() async throws -> [String] {
+        // Wenn keine Nachrichten vorhanden sind, generiere allgemeine Vorschläge
+        if messages.isEmpty {
+            return [
+                "What's the weather like?",
+                "Tell me a joke",
+                "What time is it?",
+                "Set a reminder"
+            ]
+        }
+        
+        // Erstelle einen Kontext aus den letzten Nachrichten
+        let recentMessages = messages.suffix(3)
+        let context = recentMessages.map { $0.content }.joined(separator: "\n")
+        
+        let prompt = """
+        Based on the following conversation context, generate 4 relevant and natural follow-up questions or statements that the user might want to ask or say next. Keep them short and conversational.
+        
+        Recent conversation:
+        \(context)
+        
+        Generate only the suggestions, each on a new line, without numbers or bullets. Keep them short and natural.
+        """
+        
+        do {
+            let result = try await chatService.generateFollowUpQuestions(for: prompt)
+            return result
+        } catch {
+            // Fallback zu allgemeinen Vorschlägen im Fehlerfall
+            return [
+                "What's the weather like?",
+                "Tell me a joke",
+                "What time is it?",
+                "Set a reminder"
+            ]
+        }
     }
 }
